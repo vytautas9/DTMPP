@@ -6,6 +6,8 @@ library(keras)
 library(tictoc)
 library(imager)
 
+set.seed(123)
+
 # path to dataset
 path <- paste0(getwd(), "/Data")
 
@@ -53,11 +55,11 @@ val_gen <- flow_images_from_directory(
 model <- keras_model_sequential() 
 
 model %>% 
-   layer_dense(32, input_shape = c(150, 150, 3), activation = "relu") %>% 
+   layer_flatten(input_shape = c(150, 150, 3)) %>% 
+   
+   layer_dense(32, activation = "relu") %>% 
    
    layer_dense(16, activation = "relu") %>% 
-   
-   layer_flatten() %>% 
    
    layer_dense(9, activation = 'softmax')
 
@@ -92,7 +94,7 @@ y_pred <- model %>%
 
 caret::confusionMatrix(y_pred, y_true)
 
-# 702.25 sec elapsed | 90%
+# 565.45 sec elapsed | 11%
 
 #-----------------------------------------------#
 
@@ -111,19 +113,11 @@ caret::confusionMatrix(y_pred, y_true)
 model <- keras_model_sequential() 
 
 model %>% 
-   layer_dense(128, input_shape = c(150, 150, 3), activation = "relu") %>% 
-   layer_dropout(0.5) %>% 
+   layer_flatten(input_shape = c(150, 150, 3)) %>% 
    
-   layer_dense(64, activation = "relu") %>% 
-   layer_dropout(0.3) %>% 
+   layer_dense(256, activation = "relu") %>% 
    
-   layer_dense(32, activation = "relu") %>% 
-   layer_dropout(0.3) %>% 
-   
-   layer_dense(16, activation = "relu") %>% 
-   layer_dropout(0.3) %>% 
-   
-   layer_flatten() %>% 
+   layer_dense(128, activation = "relu") %>% 
    
    layer_dense(9, activation = 'softmax')
 
@@ -160,7 +154,7 @@ y_pred <- model %>%
 
 caret::confusionMatrix(y_pred, y_true)
 
-# 1549.13 sec elapsed | 89%
+# 614.39 sec elapsed | 54%
 
 #-----------------------------------------------#
 
@@ -176,33 +170,25 @@ caret::confusionMatrix(y_pred, y_true)
 
 
 
-
-
-
-
-
-#---------------------- CNN --------------------#
+#-------------------- CNN 1 --------------------#
 # Building a model
 model <- keras_model_sequential() 
 
 model %>% 
    layer_conv_2d(32, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
    layer_max_pooling_2d(2, 2) %>% 
-   layer_dropout(rate = 0.3) %>% 
+   layer_dropout(0.3) %>% 
    
-   layer_conv_2d(64, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_conv_2d(16, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
    layer_max_pooling_2d(2, 2) %>% 
    layer_dropout(0.3) %>% 
    
    layer_flatten() %>% 
    
-   layer_dense(128, activation = "relu") %>% 
+   layer_dense(16, activation = "relu") %>% 
    layer_dropout(0.5) %>% 
    
-   layer_dense(64, activation = "relu") %>% 
-   layer_dropout(0.5) %>% 
-   
-   layer_dense(5, activation = 'softmax')
+   layer_dense(9, activation = 'softmax')
 
 summary(model)
 
@@ -225,6 +211,82 @@ history <- model %>%
    )
 toc()
 
+history$metrics$accuracy[length(history$metrics$accuracy)]
+
+y_true <- val_gen$classes %>% 
+   as.factor()
+y_pred <- model %>% 
+   predict(val_gen, steps = val_steps + 1) %>% 
+   max.col() %>% 
+   -1 %>% 
+   as.factor()
+
+caret::confusionMatrix(y_pred, y_true)
+#---------------------------------------------#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#-------------------- CNN 2 --------------------#
+# Building a model
+model <- keras_model_sequential() 
+
+model %>% 
+   layer_conv_2d(32, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   layer_dropout(rate = 0.3) %>% 
+   
+   layer_conv_2d(64, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   layer_dropout(0.3) %>% 
+   
+   layer_flatten() %>% 
+   
+   layer_dense(128, activation = "relu") %>% 
+   layer_dropout(0.5) %>% 
+   
+   layer_dense(64, activation = "relu") %>% 
+   layer_dropout(0.5) %>% 
+   
+   layer_dense(9, activation = 'softmax')
+
+summary(model)
+
+model %>% compile(
+   loss = 'categorical_crossentropy',
+   optimizer = optimizer_adam(),#optimizer_rmsprop(),
+   metrics = c('accuracy')
+)
+
+steps <- train_gen$n / train_gen$batch_size
+val_steps <- val_gen$n / val_gen$batch_size
+
+tic()
+history <- model %>%
+   fit(
+      train_gen, epochs = 10, 
+      steps_per_epoch = steps,
+      validation_data = val_gen, 
+      validation_steps = val_steps
+   )
+toc()
+
+history$metrics$accuracy[length(history$metrics$accuracy)]
+
+
 y_true <- val_gen$classes %>% 
    as.factor()
 y_pred <- model %>% 
@@ -239,5 +301,5 @@ caret::confusionMatrix(y_pred, y_true)
 
 
 
-#-----------------------------------------------#
+#---------------------------------------------#
 
