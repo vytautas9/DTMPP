@@ -297,9 +297,215 @@ y_pred <- model %>%
 
 caret::confusionMatrix(y_pred, y_true)
 
+#---------------------------------------------#
 
 
 
+
+
+
+
+
+
+
+
+
+
+#-------------------- CNN 3 --------------------#
+# Building a model
+model <- keras_model_sequential() 
+
+model %>% 
+   layer_conv_2d(64, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(64, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(32, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(32, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_flatten() %>% 
+   
+   layer_dense(512, activation = "relu") %>% 
+   layer_dense(128, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(128, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(9, activation = 'softmax')
+
+summary(model)
+
+model %>% compile(
+   loss = 'categorical_crossentropy',
+   optimizer = optimizer_adam(),#optimizer_rmsprop(),
+   metrics = c('accuracy')
+)
+
+steps <- train_gen$n / train_gen$batch_size
+val_steps <- val_gen$n / val_gen$batch_size
+
+tic()
+history <- model %>%
+   fit(
+      train_gen, epochs = 10, 
+      steps_per_epoch = steps,
+      validation_data = val_gen, 
+      validation_steps = val_steps
+   )
+toc()
+
+history$metrics$accuracy[length(history$metrics$accuracy)]
+
+
+y_true <- val_gen$classes %>% 
+   as.factor()
+y_pred <- model %>% 
+   predict(val_gen, steps = val_steps + 1) %>% 
+   max.col() %>% 
+   -1 %>% 
+   as.factor()
+
+caret::confusionMatrix(y_pred, y_true)
 
 #---------------------------------------------#
+
+
+
+
+
+
+
+#-------------------- CNN 4 --------------------#
+# Building a model
+model <- keras_model_sequential() 
+
+model %>% 
+   layer_conv_2d(64, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(64, c(3, 3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(128, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_conv_2d(128, c(3,3), activation = "relu", input_shape = c(150, 150, 3), padding = "same") %>% 
+   layer_max_pooling_2d(2, 2) %>% 
+   
+   layer_flatten() %>% 
+   
+   layer_dense(1024, activation = "relu") %>% 
+   layer_dense(512, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(512, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(9, activation = 'softmax')
+
+summary(model)
+
+model %>% compile(
+   loss = 'categorical_crossentropy',
+   optimizer = optimizer_adam(),#optimizer_rmsprop(),
+   metrics = c('accuracy')
+)
+
+steps <- train_gen$n / train_gen$batch_size
+val_steps <- val_gen$n / val_gen$batch_size
+
+tic()
+history <- model %>%
+   fit(
+      train_gen, epochs = 10, 
+      steps_per_epoch = steps,
+      validation_data = val_gen, 
+      validation_steps = val_steps
+   )
+toc()
+
+history$metrics$accuracy[length(history$metrics$accuracy)]
+
+
+y_true <- val_gen$classes %>% 
+   as.factor()
+y_pred <- model %>% 
+   predict(val_gen, steps = val_steps + 1) %>% 
+   max.col() %>% 
+   -1 %>% 
+   as.factor()
+
+caret::confusionMatrix(y_pred, y_true)
+
+#---------------------------------------------#
+
+
+
+
+
+
+
+
+
+
+#----------- Transfer learning  1---------------#
+base_model <- application_resnet50(weights="imagenet", include_top=FALSE, pooling="max", input_shape = c(150, 150, 3))
+
+predictions <- base_model$output %>% 
+   layer_dense(1024, activation = "relu") %>% 
+   layer_dense(512, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(512, activation = "relu") %>% 
+   layer_dropout(0.2) %>% 
+   
+   layer_dense(9, activation = 'softmax')
+
+model <- keras_model(base_model$input, predictions)
+
+summary(model)
+
+freeze_weights(base_model)
+
+model %>% compile(
+   loss = 'categorical_crossentropy',
+   optimizer = optimizer_adam(),#optimizer_rmsprop(),
+   metrics = c('accuracy')
+)
+
+steps <- train_gen$n / train_gen$batch_size
+val_steps <- val_gen$n / val_gen$batch_size
+
+tic()
+history <- model %>%
+   fit(
+      train_gen, epochs = 10, 
+      steps_per_epoch = steps,
+      validation_data = val_gen, 
+      validation_steps = val_steps
+   )
+toc()
+
+history$metrics$accuracy[length(history$metrics$accuracy)]
+
+
+y_true <- val_gen$classes %>% 
+   as.factor()
+y_pred <- model %>% 
+   predict(val_gen, steps = val_steps + 1) %>% 
+   max.col() %>% 
+   -1 %>% 
+   as.factor()
+
+caret::confusionMatrix(y_pred, y_true)
+
+#---------------------------------------------#
+
+
 
