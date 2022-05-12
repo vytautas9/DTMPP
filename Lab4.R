@@ -92,7 +92,7 @@ clean_tweets <- function(x) {
 myCorpus <- tm_map(myCorpus, content_transformer(clean_tweets))
 
 # Remove mystopwords from corpus
-myStopwords <- c(stopwords("en"), "k", "b", "m", "tesla", "just", "one", "every", "deliveries", "production")
+myStopwords <- c(stopwords("en"), "tesla", "just", "one", "every", "deliveries", "production")
 
 # Remove mystopwords from corpus
 myCorpus <- tm_map(myCorpus, removeWords, myStopwords)
@@ -126,12 +126,6 @@ for (i in 1:300) {
 
 
 
-df.tweets<-data.frame(text = sapply(myCorpus4, as.character), stringsAsFactors = FALSE)
-# remove duplicated
-tweets.out.unique <- df.tweets[!duplicated(df.tweets),]
-myCorpus5 <- Corpus(VectorSource(tweets.out.unique))
-
-rdmTweets_removed <- rdmTweets[!duplicated(df.tweets)]
 
 
 
@@ -144,10 +138,7 @@ rdmTweets_removed <- rdmTweets[!duplicated(df.tweets)]
 
 
 
-
-
-
-tdm <- TermDocumentMatrix(myCorpus5, control=list(wordLengths=c(1,Inf)))
+tdm <- TermDocumentMatrix(myCorpus4, control=list(wordLengths=c(1,Inf)))
 tdm
 m <- as.matrix(tdm)
 # calculate the frequency of words and sort it descendingly by frequency
@@ -232,7 +223,7 @@ for (i in 1:k) {
   cat(paste("cluster", i, ": "))
   cat(colnames(pamResult$medoids)[which(pamResult$medoids[i,]==1)], "\n")
   # print tweets in cluster i
-   print(rdmTweets_removed[pamResult$clustering==i])
+   print(rdmTweets[pamResult$clustering==i])
 }
 
 # set layout to two graphs per page matrix 2x1
